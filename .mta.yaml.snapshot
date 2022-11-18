@@ -1,0 +1,201 @@
+_schema-version: '3.1'
+ID: first
+version: 1.0.0
+description: A simple CAP project.
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - rm -rf build/ui-deployer
+        - mkdir -p build/ui-deployer
+        - rm -rf build/dist
+        - mkdir -p build/dist
+    - builder: custom
+      commands:
+        - npm install --production
+        - >-
+          bash -c "cds -v | grep 'cds-dk' || npm i --production --no-save
+          @sap/cds-dk @sap/mdk-tools"
+        - bash -c "export PATH=$PATH:$(pwd)/node_modules/.bin"
+        - cds build --production
+modules:
+  - name: first-student
+    type: html5
+    path: app/student
+    build-parameters:
+      builder: custom
+      commands:
+        - mdk build --target module --ui5 --forceUpdate
+        - bash -c "cd Web/MDKModule && rm -rf .npmrc && npm install"
+        - bash -c "cd Web/MDKModule && npm run build"
+        - >-
+          bash -c "mv Web/MDKModule/MDKModule-content.zip
+          ../../build/dist/student.zip"
+        - rm -rf Web/MDKModule/dist
+      _artifactName: student.zip
+      supported-platforms: []
+      build-result: ../../build/dist
+  - name: first-db-deployer
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    build-parameters:
+      builder: npm
+      ignore:
+        - node_modules
+        - package-lock.json
+    requires:
+      - name: first-service-uaa
+      - name: first-service-db
+  - name: first-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      memory: 256MB
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+    build-parameters:
+      builder: npm
+      ignore:
+        - node_modules
+        - package-lock.json
+    requires:
+      - name: first-service-uaa
+      - name: first-service-db
+      - name: first-service-destination
+      - name: first-service-metadata
+      - name: first-service-connectivity
+      - name: first-service-logs
+  - name: first-aux-destinations
+    type: com.sap.application.content
+    parameters:
+      content:
+        subaccount:
+          existing_destinations_policy: update
+          destinations:
+            - Authentication: OAuth2UserTokenExchange
+              Name: first-service-uaa
+              ServiceInstanceName: first-uaa
+              ServiceKeyName: first-uaa-key
+              sap.cloud.service: lcap.first
+            - Authentication: OAuth2UserTokenExchange
+              Name: first-app-srv
+              TokenServiceInstanceName: first-uaa
+              TokenServiceKeyName: first-uaa-key
+              URL: ~{srv-api/srv-url}
+              sap.cloud.service: lcap.first
+            - Name: first-service-html5-apps-repo-host
+              ServiceInstanceName: first-html5-apps-repo-host
+              ServiceKeyName: first-html5-apps-repo-host-key
+              sap.cloud.service: lcap.first
+    build-parameters:
+      no-source: true
+    requires:
+      - name: first-service-uaa
+        parameters:
+          service-key:
+            name: first-uaa-key
+      - name: srv-api
+      - name: first-service-html5-apps-repo-host
+        parameters:
+          service-key:
+            name: first-html5-apps-repo-host-key
+      - name: first-service-destination
+        parameters:
+          content-target: true
+  - name: first-launchpad
+    type: html5
+    path: build/launchpad
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install
+        - >-
+          npx -p @ui5/cli ui5 build --dest dist
+          --include-task=generateManifestBundle
+          --include-task=generateCachebusterInfo
+        - bash -c "cd dist && npx bestzip ../../../build/dist/launchpad.zip *"
+        - rm -rf dist
+      _artifactName: launchpad.zip
+      supported-platforms: []
+      build-result: ../../build/dist
+  - name: first-aux-ui-deployer
+    type: com.sap.application.content
+    path: build/ui-deployer
+    build-parameters:
+      build-result: resources
+      requires:
+        - name: first-student
+          artifacts:
+            - student.zip
+          target-path: resources
+        - name: first-launchpad
+          artifacts:
+            - launchpad.zip
+          target-path: resources
+    requires:
+      - name: first-service-html5-apps-repo-host
+        parameters:
+          content-target: true
+resources:
+  - type: org.cloudfoundry.managed-service
+    name: first-service-uaa
+    parameters:
+      service: xsuaa
+      service-plan: application
+      service-name: first-uaa
+      path: xs-security.json
+      config:
+        xsappname: first-${space}
+        role-collections:
+          - description: first
+            name: first-first-${space}
+            role-template-references:
+              - $XSAPPNAME.first
+  - type: org.cloudfoundry.managed-service
+    name: first-service-db
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+      service-name: first-db
+  - type: org.cloudfoundry.managed-service
+    name: first-service-destination
+    parameters:
+      service: destination
+      service-plan: lite
+      service-name: first-destination
+      config:
+        HTML5Runtime_enabled: true
+        version: 1.0.0
+  - type: org.cloudfoundry.user-provided-service
+    name: first-service-metadata
+    parameters:
+      service: metadata
+      service-plan: standard
+      service-name: first-metadata
+      config:
+        default-domain: ${default-domain}
+  - type: org.cloudfoundry.managed-service
+    name: first-service-connectivity
+    parameters:
+      service: connectivity
+      service-plan: lite
+      service-name: first-connectivity
+  - type: org.cloudfoundry.managed-service
+    name: first-service-logs
+    parameters:
+      service: application-logs
+      service-plan: lite
+      service-name: first-logs
+  - type: org.cloudfoundry.managed-service
+    name: first-service-html5-apps-repo-host
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host
+      service-name: first-html5-apps-repo-host

@@ -1,0 +1,61 @@
+{
+	"Caption": "student Detail",
+	"DesignTimeTarget": {
+		"Service": "/student/Services/service1.service",
+		"EntitySet": "student",
+		"QueryOptions": ""
+	},
+	"ActionBar": {
+		"Items": []
+	},
+	"Controls": [
+		{
+			"Sections": [
+				{
+					"ObjectHeader": {
+						"Tags": [],
+						"DetailImage": "",
+						"HeadlineText": "{firstname}",
+						"Subhead": "{lastname}",
+						"BodyText": "",
+						"Footnote": "",
+						"Description": "{schoolname}",
+						"StatusText": "",
+						"StatusImage": "",
+						"SubstatusImage": "",
+						"SubstatusText": ""
+					},
+					"_Type": "Section.Type.ObjectHeader"
+				},
+				{
+					"KeyAndValues": [
+						{
+							"KeyName": "firstname",
+							"Value": "{firstname}"
+						},
+						{
+							"KeyName": "lastname",
+							"Value": "{lastname}"
+						},
+						{
+							"KeyName": "schoolname",
+							"Value": "{schoolname}"
+						}
+					],
+					"Layout": {
+						"NumberOfColumns": 2
+					},
+					"MaxItemCount": 1,
+					"_Name": "SectionKeyValue0",
+					"_Type": "Section.Type.KeyValue"
+				}
+			],
+			"DataSubscriptions": [],
+			"_Type": "Control.Type.SectionedTable",
+			"_Name": "SectionedTable"
+		}
+	],
+	"_Type": "Page",
+	"_Name": "student_Detail",
+	"PrefersLargeCaption": true
+}

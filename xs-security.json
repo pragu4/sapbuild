@@ -1,0 +1,21 @@
+{
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.first",
+      "description": "first"
+    }
+  ],
+  "attributes": [],
+  "role-templates": [
+    {
+      "name": "first",
+      "description": "first",
+      "scope-references": [
+        "$XSAPPNAME.first"
+      ],
+      "attribute-references": []
+    }
+  ],
+  "xsappname": "first",
+  "tenant-mode": "dedicated"
+}
